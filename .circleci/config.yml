@@ -1,0 +1,22 @@
+version: 2.0
+jobs:
+  build:
+    working_directory: ~/cubeball
+    docker:
+      - image: circleci/openjdk:8-jdk-stretch
+    steps:
+      - checkout
+      - restore_cache:
+          key: cubeball-{{ checksum "pom.xml" }}
+
+      - run: mvn dependency:go-offline
+
+      - save_cache:
+          paths:
+            - ~/.m2
+          key: cubeball-{{ checksum "pom.xml" }}
+
+      - run: mvn install
+
+      - store_artifacts:
+          path: /home/circleci/cubeball/target/CubeBall-SNAPSHOT.jar
