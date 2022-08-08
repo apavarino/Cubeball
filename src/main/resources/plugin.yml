@@ -1,0 +1,14 @@
+name: CubeBall
+main: me.crylonz.CubeBall
+version: 1.2.0
+author: Crylonz
+description: Play football in Minecraft
+api-version: 1.13
+commands:
+  cb:
+    description: give you the ball
+    usage: /cb
+permissions:
+  cubeball.manage:
+    description: Allows player to manage cubeball
+    default: op
