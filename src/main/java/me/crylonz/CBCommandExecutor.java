@@ -93,6 +93,7 @@ public class CBCommandExecutor implements CommandExecutor {
                                 player.sendMessage("[Cubeball] " + ChatColor.GREEN + "Player added to " + args[1].toUpperCase() + " team !");
                                 playerToAdd.sendMessage("[Cubeball] " + ChatColor.GREEN + "Your are in the " + args[1].toUpperCase() + " team !");
                                 match.displayTeams(player);
+                                player.sendMessage("use /cb start when you are ready");
                             } else {
                                 player.sendMessage("[Cubeball] " + ChatColor.RED + "Cannot find this player !");
                             }

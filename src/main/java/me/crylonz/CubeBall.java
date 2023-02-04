@@ -1,5 +1,6 @@
 package me.crylonz;
 
+import org.bstats.bukkit.Metrics;
 import org.bukkit.*;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -11,6 +12,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.Vector;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Objects;
 import java.util.logging.Logger;
 
@@ -52,7 +54,10 @@ public class CubeBall extends JavaPlugin {
     public void onEnable() {
         PluginManager pm = getServer().getPluginManager();
         pm.registerEvents(new CubeBallListener(), this);
+
         plugin = this;
+
+        Metrics metrics = new Metrics(this, 17634);
 
         launchRepeatingTask();
 
@@ -60,7 +65,6 @@ public class CubeBall extends JavaPlugin {
                 .setExecutor(new CBCommandExecutor());
 
         Objects.requireNonNull(getCommand("cb")).setTabCompleter(new CBTabCompletion());
-
 
         configFile = new File(getDataFolder(), "config.yml");
         if (!configFile.exists()) {
@@ -113,9 +117,16 @@ public class CubeBall extends JavaPlugin {
             if (ball != null) {
                 ball.setTicksLived(1);
 
-                for (Player player : Bukkit.getOnlinePlayers()) {
+                ArrayList<Player> players = new ArrayList<>();
+                if (match != null) {
+                    players.addAll(match.getBlueTeam());
+                    players.addAll(match.getRedTeam());
+                } else {
+                    players.addAll(Bukkit.getOnlinePlayers());
+                }
 
-                    if (!player.getWorld().equals(ball.getWorld())) {
+                for (Player player : players) {
+                    if (!player.isOnline() && !player.getWorld().equals(ball.getWorld())) {
                         break;
                     }
 

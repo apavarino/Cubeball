@@ -92,6 +92,7 @@ public class Match {
         p.sendMessage("Blue Goal  : " + (blueTeamGoalBlocks.size() != 0 ? ChatColor.GREEN + "OK" : ChatColor.RED + "KO") + " (" + blueTeamGoalBlocks.size() + ")");
         p.sendMessage("Red Goal   : " + (redTeamGoalBlocks.size() != 0 ? ChatColor.GREEN + "OK" : ChatColor.RED + "KO") + " (" + redTeamGoalBlocks.size() + ")");
         p.sendMessage("------------------");
+        p.sendMessage("Next step : Use /cb team to generate team");
     }
 
     public void start(Player p) {
@@ -168,6 +169,7 @@ public class Match {
 
     public void checkGoal(Location ballLocation) {
         if (matchState.equals(IN_PROGRESS) || matchState.equals(OVERTIME)) {
+
             for (Location blockLocation : blueTeamGoalBlocks) {
                 if (ballLocation.getBlockX() == blockLocation.getBlockX() &&
                         ballLocation.getBlockZ() == blockLocation.getBlockZ()) {
