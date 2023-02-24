@@ -1,6 +1,7 @@
 name: CubeBall
 main: me.crylonz.CubeBall
-version: 1.3.0
+softdepend: [Multiverse-Core]
+version: 1.4.0
 author: Crylonz
 description: Play football in Minecraft
 api-version: 1.13

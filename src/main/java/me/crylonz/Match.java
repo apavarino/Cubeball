@@ -138,7 +138,7 @@ public class Match {
     private void startRound() {
         matchState = matchTimer > 0 ? IN_PROGRESS : OVERTIME;
         removeBall();
-        CubeBall.generateBall(ballSpawn);
+        CubeBall.generateBall(BALL_MATCH_ID, ballSpawn, null);
     }
 
     public boolean addPlayerToTeam(Player p, Team team) {
@@ -189,7 +189,7 @@ public class Match {
     }
 
     private void goal(Team team) {
-        ball.remove();
+        removeBall();
         if (Team.BLUE.equals(team)) {
             blueScore++;
             triggerGoalAnimation(Team.BLUE);
@@ -236,8 +236,11 @@ public class Match {
     }
 
     public double computeSpeedGoal() {
-        if (ball != null) {
-            return Math.round((Math.abs((lastVelocity.getX())) + Math.abs((lastVelocity.getY())) + Math.abs((lastVelocity.getZ()))) * 100);
+
+        Ball ball = balls.get(BALL_MATCH_ID);
+
+        if (ball != null && ball.getBall() != null) {
+            return Math.round((Math.abs((ball.getLastVelocity().getX())) + Math.abs((ball.getLastVelocity().getY())) + Math.abs((ball.getLastVelocity().getZ()))) * 100);
         }
         return 0;
     }
@@ -344,9 +347,7 @@ public class Match {
     }
 
     public void removeBall() {
-        if (ball != null) {
-            ball.remove();
-        }
+        destroyBall(BALL_MATCH_ID);
     }
 
     public boolean pause() {
