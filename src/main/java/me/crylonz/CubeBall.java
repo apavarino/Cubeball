@@ -6,6 +6,7 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.FallingBlock;
 import org.bukkit.entity.Player;
+import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -47,6 +48,7 @@ public class CubeBall extends JavaPlugin {
 
         BlockData blockData = Bukkit.createBlockData(cubeBallBlock);
         FallingBlock block = Objects.requireNonNull(location.getWorld()).spawnFallingBlock(location, blockData);
+        block.setMetadata("ballID", new FixedMetadataValue(plugin, id));
         block.setGlowing(true);
         block.setDropItem(false);
         block.setInvulnerable(true);
@@ -148,50 +150,48 @@ public class CubeBall extends JavaPlugin {
                         players.addAll(Bukkit.getOnlinePlayers());
                     }
 
-                    for (Player player : players) {
-                        if (!player.isOnline() && !player.getWorld().equals(ballData.getBall().getWorld())) {
-                            break;
-                        }
+                    ballData.getBall().getNearbyEntities(10, 10, 10)
+                            .stream().filter(entity -> entity instanceof Player)
+                            .forEach(p -> {
+                                Player player = (Player) p;
+                                // if player is colliding the ball
+                                if (player.getLocation().distance(ballData.getBall().getLocation()) < 1 || (
+                                        player.getLocation().distance(ballData.getBall().getLocation()) < 2 &&
+                                                Math.floor(ballData.getBall().getLocation().getX()) == Math.floor(player.getLocation().getX()) &&
+                                                Math.floor(ballData.getBall().getLocation().getZ()) == Math.floor(player.getLocation().getZ()))) {
 
-                        // if player is colliding the ball
-                        if (player.getLocation().distance(ballData.getBall().getLocation()) < 1 || (
-                                player.getLocation().distance(ballData.getBall().getLocation()) < 2 &&
-                                        Math.floor(ballData.getBall().getLocation().getX()) == Math.floor(player.getLocation().getX()) &&
-                                        Math.floor(ballData.getBall().getLocation().getZ()) == Math.floor(player.getLocation().getZ()))) {
+                                    // compute velocity to the ball
+                                    double yVeclocity = 0.15;
 
-                            // compute velocity to the ball
-                            double yVeclocity = 0.15;
+                                    if (player.isSneaking()) {
+                                        yVeclocity = 0.5;
+                                    } else if (player.isSprinting()) {
+                                        yVeclocity = 0.25;
+                                    }
 
-                            if (player.isSneaking()) {
-                                yVeclocity = 0.5;
-                            } else if (player.isSprinting()) {
-                                yVeclocity = 0.25;
-                            }
+                                    Vector velocity = ballData.getBall().getVelocity();
+                                    velocity.setY(ballData.getBall().getVelocity().getY() + yVeclocity + player.getVelocity().getY() / 2);
+                                    velocity.setX(ballData.getBall().getVelocity().getX() + player.getLocation().getDirection().getX() / 2);
+                                    velocity.setZ(ballData.getBall().getVelocity().getZ() + player.getLocation().getDirection().getZ() / 2);
 
-                            Vector velocity = ballData.getBall().getVelocity();
-                            velocity.setY(ballData.getBall().getVelocity().getY() + yVeclocity + player.getVelocity().getY() / 2);
-                            velocity.setX(ballData.getBall().getVelocity().getX() + player.getLocation().getDirection().getX() / 2);
-                            velocity.setZ(ballData.getBall().getVelocity().getZ() + player.getLocation().getDirection().getZ() / 2);
+                                    // if player is not moving, create bouncing on it
+                                    if (abs(player.getVelocity().getX() + player.getVelocity().getY() + player.getVelocity().getZ()) == 0) {
+                                        velocity.setY(0);
+                                        velocity.setX(0);
+                                        velocity.setZ(0);
+                                    }
 
-                            // if player is not moving, create bouncing on it
-                            if (abs(player.getVelocity().getX() + player.getVelocity().getY() + player.getVelocity().getZ()) == 0) {
-                                velocity.setY(0);
-                                velocity.setX(0);
-                                velocity.setZ(0);
-                            }
+                                    // apply ball trajectory
+                                    ballData.getBall().setVelocity(velocity);
+                                    ballData.getBall().setGravity(true);
+                                    ballData.getBall().getWorld().playSound(ballData.getBall().getLocation(), Sound.BLOCK_WOOL_HIT, 10, 1);
+                                    ballData.setPlayerCollisionTick(0);
 
-                            // apply ball trajectory
-                            ballData.getBall().setVelocity(velocity);
-                            ballData.getBall().setGravity(true);
-                            ballData.getBall().getWorld().playSound(ballData.getBall().getLocation(), Sound.BLOCK_WOOL_HIT, 10, 1);
-                            ballData.setPlayerCollisionTick(0);
-
-                            if (match != null) {
-                                match.setLastTouchPlayer(player.getDisplayName());
-                            }
-                            break;
-                        }
-                    }
+                                    if (match != null) {
+                                        match.setLastTouchPlayer(player.getDisplayName());
+                                    }
+                                }
+                            });
 
                     //compute bouncing on other blocks
                     if (ballData.getPlayerCollisionTick() > 3) {
