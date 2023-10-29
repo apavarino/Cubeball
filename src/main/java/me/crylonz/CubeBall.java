@@ -13,9 +13,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.Vector;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Objects;
+import java.util.*;
 import java.util.logging.Logger;
 
 import static java.lang.Math.abs;
@@ -68,8 +66,10 @@ public class CubeBall extends JavaPlugin {
     }
 
     public static void destroyBall(String id) {
-        balls.get(id).getBall().remove();
-        balls.remove(id);
+        if (balls.get(id) != null && balls.get(id).getBall() != null) {
+            balls.get(id).getBall().remove();
+            balls.remove(id);
+        }
     }
 
     public void onEnable() {
@@ -138,7 +138,10 @@ public class CubeBall extends JavaPlugin {
 
         getServer().getScheduler().scheduleSyncRepeatingTask(this, () -> {
 
-            balls.forEach((id, ballData) -> {
+            for (Iterator<Map.Entry<String, Ball>> iterator = balls.entrySet().iterator(); iterator.hasNext(); ) {
+                Map.Entry<String, Ball> entry = iterator.next();
+                String id = entry.getKey();
+                Ball ballData = entry.getValue();
                 if (ballData.getBall() != null) {
                     ballData.getBall().setTicksLived(1);
 
@@ -224,7 +227,7 @@ public class CubeBall extends JavaPlugin {
                     ballData.setLastVelocity(ballData.getBall().getVelocity().clone());
                     ballData.setPlayerCollisionTick(ballData.getPlayerCollisionTick() + 1);
                 }
-            });
+            }
         }, 0, 2);
     }
 }

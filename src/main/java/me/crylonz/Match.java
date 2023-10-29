@@ -189,7 +189,6 @@ public class Match {
     }
 
     private void goal(Team team) {
-        removeBall();
         if (Team.BLUE.equals(team)) {
             blueScore++;
             triggerGoalAnimation(Team.BLUE);
@@ -207,6 +206,7 @@ public class Match {
             matchState = GOAL;
             endMatch();
         }
+        destroyBall(BALL_MATCH_ID);
     }
 
     public void endMatch() {
