@@ -4,7 +4,7 @@
 
 <h2  align="center">
     <img src="http://cf.way2muchnoise.eu/full_470085_downloads.svg" alt="download"/> 
-    <img src="https://circleci.com/gh/apavarino/Cubeball.svg?style=shield" alt="CI"/>
+    <img src="https://github.com/apavarino/Cubeball/actions/workflows/ci.yml/badge.svg" alt="CI"/>
     <img src="https://img.shields.io/github/license/apavarino/cubeball" alt="licence"/>
     <img src="https://img.shields.io/github/last-commit/apavarino/cubeball" alt="commit"/>
 </h2>
