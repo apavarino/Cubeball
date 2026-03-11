@@ -1,3 +1,6 @@
 /target/
+/build/
+/.gradle/
+/.tmp-gradle/
 /CubeBall.iml
 /.idea/

@@ -30,11 +30,11 @@ public class CubeBallListener implements Listener {
 
                     if (ballData.getBall() != null) {
                         Vector velocity = ballData.getBall().getVelocity();
-                        double zVelocity = abs(velocity.getZ()) / 1.5;
-                        double xVelocity = abs(velocity.getX()) / 1.5;
+                        double zVelocity = abs(velocity.getZ()) / listenerBounceDivisor;
+                        double xVelocity = abs(velocity.getX()) / listenerBounceDivisor;
                         double maxZX = max(zVelocity, xVelocity);
 
-                        velocity.setY(min(maxZX, 0.5));
+                        velocity.setY(min(maxZX, listenerBounceMaxYVelocity));
 
                         destroyBall(ballId);
                         generateBall(ballId, e.getEntity().getLocation(), ballData.getLastVelocity());
@@ -42,12 +42,12 @@ public class CubeBallListener implements Listener {
                         ballData = balls.get(ballId);
                         ballData.getBall().setVelocity(velocity);
 
-                        if (abs(velocity.getX() + velocity.getY() + velocity.getZ()) <= 0.001 || velocity.getY() < 0.025) {
+                        if (abs(velocity.getX() + velocity.getY() + velocity.getZ()) <= listenerStopVelocityThreshold || velocity.getY() < listenerStopMinYVelocity) {
                             ballData.getBall().setVelocity(ballData.getBall().getVelocity().zero());
                             ballData.getBall().setGravity(false);
                         } else {
-                            if (abs(velocity.getX() + velocity.getY() + velocity.getZ()) > 0.1) {
-                                ballData.getBall().getWorld().playSound(ballData.getBall().getLocation(), Sound.BLOCK_WOOL_HIT, 10, 1);
+                            if (abs(velocity.getX() + velocity.getY() + velocity.getZ()) > ballHitSoundThreshold) {
+                                playBallHitSound(ballData.getBall().getLocation());
                             }
                         }
                     }
@@ -62,7 +62,7 @@ public class CubeBallListener implements Listener {
         AtomicReference<Ball> ballTrigger = new AtomicReference<>();
         balls.forEach((id, ball) -> {
             if (ball.getBall().getWorld().equals(location.getWorld()) &&
-                    ball.getBall().getLocation().distanceSquared(location) < 2) {
+                    ball.getBall().getLocation().distanceSquared(location) < listenerFetchDistanceSquared) {
                 ballTrigger.set(ball);
             }
         });

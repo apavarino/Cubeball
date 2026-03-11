@@ -24,7 +24,10 @@ public class CBCommandExecutor implements CommandExecutor {
 
             if (cmd.getName().equalsIgnoreCase("cb")) {
                 if (args.length == 1) {
-                    if (args[0].equalsIgnoreCase("match") && player.hasPermission("cubeball.manage")) {
+                    if (args[0].equalsIgnoreCase("reload") && hasManagePermission(player)) {
+                        reloadPluginConfiguration();
+                        player.sendMessage("[Cubeball] " + ChatColor.GREEN + "Configuration reloaded.");
+                    } else if (args[0].equalsIgnoreCase("match") && player.hasPermission("cubeball.manage")) {
                         balls.remove(BALL_MATCH_ID);
                         match = new Match();
                         match.scanSpawn(player);
@@ -113,6 +116,17 @@ public class CBCommandExecutor implements CommandExecutor {
             }
 
         } else {
+            if (args.length == 1) {
+                if (args[0].equalsIgnoreCase("reload")) {
+                    if (hasManagePermission(sender)) {
+                        reloadPluginConfiguration();
+                        sender.sendMessage("[Cubeball] " + ChatColor.GREEN + "Configuration reloaded.");
+                    } else {
+                        sender.sendMessage("[Cubeball] " + ChatColor.RED + "You do not have permission to do that.");
+                    }
+                }
+            }
+
             if (args.length == 2) {
                 if (args[0].equalsIgnoreCase("remove")) {
                     if (balls.get(args[1]) != null) {
@@ -132,6 +146,10 @@ public class CBCommandExecutor implements CommandExecutor {
             }
         }
         return true;
+    }
+
+    private boolean hasManagePermission(CommandSender sender) {
+        return !(sender instanceof Player) || sender.isOp() || sender.hasPermission("cubeball.manage");
     }
 
     private static void generateWithPosition(CommandSender sender, String[] args) {

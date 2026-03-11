@@ -24,6 +24,7 @@ public class CBTabCompletion implements TabCompleter {
             if (cmd.getName().equalsIgnoreCase("cb") && player.hasPermission("cubeball.manage")) {
 
                 if (args.length == 1) {
+                    list.add("reload");
                     list.add("generate");
                     list.add("remove");
                     list.add("match");

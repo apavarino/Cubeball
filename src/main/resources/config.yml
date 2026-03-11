@@ -1,13 +1,134 @@
+####################################################################################################
+# CubeBall Configuration
 #
-# PLEASE RELOAD OR RESTART SERVER AFTER A CHANGE IN THIS FILE.
-# Any trouble to use this file ? Ask helps on Discord : https://discordapp.com/invite/jCsvJxS
+# Plugin page and documentation:
+#   https://dev.bukkit.org/projects/cubeball
 #
+# Support (Discord):
+#   https://discordapp.com/invite/jCsvJxS
+#
+# After editing this file, run '/cb reload' to apply the new settings.
+####################################################################################################
 
-# Which type of block represent your ball ?
-cubeBallBlock: SPONGE
+# Material, sound, particle and effect names must match Bukkit/Paper enum names.
+# Example materials: SPONGE, IRON_BLOCK, BLUE_WOOL
+# Example sounds: BLOCK_WOOL_HIT, BLOCK_BEACON_ACTIVATE
+# Example particles: CLOUD, SMOKE, EXPLOSION
+# Example effects: VILLAGER_PLANT_GROW
 
-# How long is a match ? (In seconds)
-matchDuration: 300
+# Ball rendering and spawn behavior.
+ball:
+  # Falling block material used as the ball.
+  material: SPONGE
+  # If true, the falling block may drop as an item when broken.
+  drop-item: false
+  # Protects the ball entity from damage when supported by the server version.
+  invulnerable: true
+  # Visual feedback shown when a ball is spawned.
+  spawn-particle:
+    # Particle type spawned at ball creation.
+    type: CLOUD
+    # Number of particles to spawn.
+    count: 12
+    # Spawn spread around the ball.
+    offset:
+      x: 0.2
+      y: 0.2
+      z: 0.2
+    # Extra particle speed.
+    speed: 0.01
 
-# Max goal per match ( 0 = unlimited )
-maxGoal: 0
+# Match flow, arena scan and title behavior.
+match:
+  # Match duration in seconds.
+  duration-seconds: 300
+  # Maximum goals needed to end the match. Use 0 for unlimited.
+  max-goals: 0
+  # Radius used by /cb match to scan arena marker blocks around the player.
+  scan-radius: 75
+  # Delay between countdown messages ("3", "2", "1") in ticks.
+  countdown-step-ticks: 20
+  # Delay before the next round starts after a goal, in ticks.
+  round-restart-delay-ticks: 60
+  # Title timing and sound settings sent to players.
+  title:
+    fade-in-ticks: 1
+    # Multiplied by the duration value used in code when sending titles.
+    stay-per-second-ticks: 20
+    fade-out-ticks: 1
+    sound:
+      # Sound played when titles are shown.
+      name: BLOCK_BEACON_ACTIVATE
+      volume: 1.0
+      pitch: 3.0
+  # Goal celebration settings.
+  goal-animation:
+    firework:
+      # Spawn fireworks on goal blocks when a team scores.
+      enabled: true
+    effect:
+      # World effect played on goal blocks.
+      name: VILLAGER_PLANT_GROW
+      # Optional numeric data used by the selected effect.
+      data: 3
+
+# Arena marker materials used by /cb match scan.
+arena:
+  materials:
+    # Marker block for the ball spawn point.
+    ball-spawn: EMERALD_BLOCK
+    # Marker block for blue team player spawns.
+    blue-team-spawn: BLUE_WOOL
+    # Marker block for the blue team goal line.
+    blue-team-goal: BLUE_CONCRETE
+    # Marker block for red team player spawns.
+    red-team-spawn: RED_WOOL
+    # Marker block for the red team goal line.
+    red-team-goal: RED_CONCRETE
+
+# Ball movement, collision and sound tuning.
+physics:
+  # Radius used to search nearby players around the ball.
+  player-search-radius: 10
+  # Direct hit distance from player to ball.
+  player-direct-hit-distance: 1.0
+  # Extra collision distance when player and ball share the same X/Z block column.
+  player-column-hit-distance: 2.0
+  # Vertical boost applied to the ball depending on player movement state.
+  kick:
+    y-velocity:
+      base: 0.15
+      sneaking: 0.5
+      sprinting: 0.25
+  # Bounce detection used by the repeating ball update task.
+  block-bounce:
+    # Number of update ticks to wait before checking block bounce.
+    delay-ticks: 3
+    # Minimum velocity delta used to detect a bounce.
+    threshold: 0.2
+  # Bounce handling used when the falling block tries to place itself.
+  listener-bounce:
+    # Divides X/Z speed to compute the new Y bounce speed.
+    divisor: 1.5
+    # Maximum Y speed applied after a listener bounce.
+    max-y-velocity: 0.5
+    # Ball is stopped if total motion is below this threshold.
+    stop-velocity-threshold: 0.001
+    # Ball is also stopped if Y motion is below this threshold.
+    stop-min-y-velocity: 0.025
+    # Distance squared used to find which tracked ball touched a block.
+    fetch-distance-squared: 2.0
+  # Sound played when the ball is hit or bounces.
+  ball-hit-sound:
+    name: BLOCK_WOOL_HIT
+    volume: 10.0
+    pitch: 1.0
+    # Minimum total motion required before playing the hit sound.
+    minimum-impact: 0.1
+
+# Scheduler periods in ticks.
+tasks:
+  # Main match timer task period.
+  match-timer-period-ticks: 20
+  # Ball physics update task period.
+  ball-update-period-ticks: 2

@@ -1,8 +1,7 @@
 package me.crylonz;
 
 import org.bukkit.*;
-import org.bukkit.block.Block;
-import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
@@ -19,11 +18,6 @@ enum MatchState {CREATED, READY, IN_PROGRESS, GOAL, PAUSED, OVERTIME, END}
 
 public class Match {
 
-    private static final Material ballSpawnBlock = Material.EMERALD_BLOCK;
-    private static final Material blueTeamSpawnBlock = Material.BLUE_WOOL;
-    private static final Material blueTeamGoalBlock = Material.BLUE_CONCRETE;
-    private static final Material redTeamSpawnBlock = Material.RED_WOOL;
-    private static final Material redTeamGoalBlock = Material.RED_CONCRETE;
     private final Random rand = new Random();
     private final ArrayList<Location> blueTeamGoalBlocks;
     private final ArrayList<Location> redTeamGoalBlocks;
@@ -55,8 +49,8 @@ public class Match {
         blueTeamSpawns = new ArrayList<>();
         redTeamSpawns = new ArrayList<>();
 
-        int radius = 75;
-        final Block block = p.getLocation().getBlock();
+        int radius = scanRadius;
+        final org.bukkit.block.Block block = p.getLocation().getBlock();
         for (int x = -(radius); x <= radius; x++) {
             for (int y = -(radius); y <= radius; y++) {
                 for (int z = -(radius); z <= radius; z++) {
@@ -126,13 +120,13 @@ public class Match {
             player.teleport(redTeamSpawns.get(randomIndex));
         });
 
-        getServer().getScheduler().scheduleSyncDelayedTask(plugin, () -> sendMessageToAllPlayer("3", "", 1), 20);
-        getServer().getScheduler().scheduleSyncDelayedTask(plugin, () -> sendMessageToAllPlayer("2", "", 1), 40);
-        getServer().getScheduler().scheduleSyncDelayedTask(plugin, () -> sendMessageToAllPlayer("1", "", 1), 60);
+        getServer().getScheduler().scheduleSyncDelayedTask(plugin, () -> sendMessageToAllPlayer("3", "", 1), countdownStepTicks);
+        getServer().getScheduler().scheduleSyncDelayedTask(plugin, () -> sendMessageToAllPlayer("2", "", 1), countdownStepTicks * 2L);
+        getServer().getScheduler().scheduleSyncDelayedTask(plugin, () -> sendMessageToAllPlayer("1", "", 1), countdownStepTicks * 3L);
         getServer().getScheduler().scheduleSyncDelayedTask(plugin, () -> {
             sendMessageToAllPlayer("GO !", "", 1);
             startRound();
-        }, 80);
+        }, countdownStepTicks * 4L);
     }
 
     private void startRound() {
@@ -201,7 +195,7 @@ public class Match {
         if (matchState.equals(IN_PROGRESS) && (maxGoal == 0 || (blueScore != maxGoal && redScore != maxGoal))) {
             sendScoreToPlayer();
             matchState = GOAL;
-            getServer().getScheduler().scheduleSyncDelayedTask(plugin, this::startDelayedRound, 30 * 2);
+            getServer().getScheduler().scheduleSyncDelayedTask(plugin, this::startDelayedRound, roundRestartDelayTicks);
         } else {
             matchState = GOAL;
             endMatch();
@@ -248,22 +242,22 @@ public class Match {
     public void sendMessageToAllPlayer(String title, String subtitle, int duration) {
         blueTeam.forEach(player -> {
             if (player != null) {
-                player.sendTitle(title, subtitle, 1, duration * 20, 1);
-                player.playSound(player.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1, 3);
+                player.sendTitle(title, subtitle, titleFadeInTicks, duration * titleStayPerSecondTicks, titleFadeOutTicks);
+                player.playSound(player.getLocation(), titleSound, titleSoundVolume, titleSoundPitch);
             }
         });
 
         redTeam.forEach(player -> {
             if (player != null) {
-                player.sendTitle(title, subtitle, 1, duration * 20, 1);
-                player.playSound(player.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1, 3);
+                player.sendTitle(title, subtitle, titleFadeInTicks, duration * titleStayPerSecondTicks, titleFadeOutTicks);
+                player.playSound(player.getLocation(), titleSound, titleSoundVolume, titleSoundPitch);
             }
         });
 
         spectatorTeam.forEach(player -> {
             if (player != null) {
-                player.sendTitle(title, subtitle, 1, duration * 20, 1);
-                player.playSound(player.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1, 3);
+                player.sendTitle(title, subtitle, titleFadeInTicks, duration * titleStayPerSecondTicks, titleFadeOutTicks);
+                player.playSound(player.getLocation(), titleSound, titleSoundVolume, titleSoundPitch);
             }
         });
     }
@@ -271,16 +265,25 @@ public class Match {
     public void triggerGoalAnimation(Team team) {
         if (team.equals(Team.BLUE)) {
             redTeamGoalBlocks.forEach(block -> {
-                Objects.requireNonNull(block.getWorld()).spawnEntity(block.getBlock().getLocation(), EntityType.FIREWORK);
-                Objects.requireNonNull(block.getWorld()).playEffect(block.getBlock().getLocation(), Effect.VILLAGER_PLANT_GROW, 3);
+                playGoalAnimation(block);
             });
         } else {
             blueTeamGoalBlocks.forEach(block -> {
-                Objects.requireNonNull(block.getWorld()).spawnEntity(block.getBlock().getLocation(), EntityType.FIREWORK);
-                Objects.requireNonNull(block.getWorld()).playEffect(block.getBlock().getLocation(), Effect.VILLAGER_PLANT_GROW, 3);
+                playGoalAnimation(block);
             });
 
         }
+    }
+
+    private void spawnFirework(Location block) {
+        Objects.requireNonNull(block.getWorld()).spawn(block.getBlock().getLocation(), Firework.class);
+    }
+
+    private void playGoalAnimation(Location block) {
+        if (spawnGoalFireworks) {
+            spawnFirework(block);
+        }
+        Objects.requireNonNull(block.getWorld()).playEffect(block.getBlock().getLocation(), goalEffect, goalEffectData);
     }
 
     public void displayTeams(Player p) {

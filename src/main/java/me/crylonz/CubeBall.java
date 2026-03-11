@@ -22,6 +22,12 @@ import static me.crylonz.MatchState.OVERTIME;
 
 public class CubeBall extends JavaPlugin {
 
+    interface ConfigGateway {
+        void reloadConfig();
+
+        FileConfiguration getConfig();
+    }
+
     public static File configFile;
     public static FileConfiguration customConfig = null;
     public static HashMap<String, Ball> balls = new HashMap<>();
@@ -30,6 +36,7 @@ public class CubeBall extends JavaPlugin {
 
     public static String BALL_MATCH_ID = "BALL_MATCH_ID_DONT_USE_IT";
     public static Plugin plugin;
+    static ConfigGateway configGateway;
     public static int matchTimer = 0;
     public final static Logger log = Logger.getLogger("Minecraft");
 
@@ -37,6 +44,50 @@ public class CubeBall extends JavaPlugin {
     public static Material cubeBallBlock = Material.IRON_BLOCK;
     public static int matchDuration = 300;
     public static int maxGoal = 0;
+    public static Material ballSpawnBlock = Material.EMERALD_BLOCK;
+    public static Material blueTeamSpawnBlock = Material.BLUE_WOOL;
+    public static Material blueTeamGoalBlock = Material.BLUE_CONCRETE;
+    public static Material redTeamSpawnBlock = Material.RED_WOOL;
+    public static Material redTeamGoalBlock = Material.RED_CONCRETE;
+    public static boolean ballDropItem = false;
+    public static boolean ballInvulnerable = true;
+    public static Particle ballSpawnParticle = Particle.CLOUD;
+    public static int ballSpawnParticleCount = 12;
+    public static double ballSpawnParticleOffsetX = 0.2;
+    public static double ballSpawnParticleOffsetY = 0.2;
+    public static double ballSpawnParticleOffsetZ = 0.2;
+    public static double ballSpawnParticleSpeed = 0.01;
+    public static Sound ballHitSound = Sound.BLOCK_WOOL_HIT;
+    public static float ballHitSoundVolume = 10.0F;
+    public static float ballHitSoundPitch = 1.0F;
+    public static double ballHitSoundThreshold = 0.1;
+    public static int ballPlayerSearchRadius = 10;
+    public static double ballDirectHitDistance = 1.0;
+    public static double ballColumnHitDistance = 2.0;
+    public static double baseKickYVelocity = 0.15;
+    public static double sneakingKickYVelocity = 0.5;
+    public static double sprintingKickYVelocity = 0.25;
+    public static int blockBounceDelayTicks = 3;
+    public static double blockBounceThreshold = 0.2;
+    public static int ballUpdateTaskPeriodTicks = 2;
+    public static int matchTimerTaskPeriodTicks = 20;
+    public static int scanRadius = 75;
+    public static int countdownStepTicks = 20;
+    public static int roundRestartDelayTicks = 60;
+    public static int titleFadeInTicks = 1;
+    public static int titleStayPerSecondTicks = 20;
+    public static int titleFadeOutTicks = 1;
+    public static Sound titleSound = Sound.BLOCK_BEACON_ACTIVATE;
+    public static float titleSoundVolume = 1.0F;
+    public static float titleSoundPitch = 3.0F;
+    public static Effect goalEffect = Effect.VILLAGER_PLANT_GROW;
+    public static int goalEffectData = 3;
+    public static boolean spawnGoalFireworks = true;
+    public static double listenerBounceDivisor = 1.5;
+    public static double listenerBounceMaxYVelocity = 0.5;
+    public static double listenerStopVelocityThreshold = 0.001;
+    public static double listenerStopMinYVelocity = 0.025;
+    public static double listenerFetchDistanceSquared = 2.0;
 
     public static void generateBall(String id, Location location, Vector lastVelocity) {
 
@@ -47,10 +98,16 @@ public class CubeBall extends JavaPlugin {
         BlockData blockData = Bukkit.createBlockData(cubeBallBlock);
         FallingBlock block = Objects.requireNonNull(location.getWorld()).spawnFallingBlock(location, blockData);
         block.setMetadata("ballID", new FixedMetadataValue(plugin, id));
-        block.setGlowing(true);
-        block.setDropItem(false);
-        block.setInvulnerable(true);
-        block.playEffect(EntityEffect.ENTITY_POOF);
+        applyBallVisualSettings(block);
+        block.getWorld().spawnParticle(
+                ballSpawnParticle,
+                block.getLocation(),
+                ballSpawnParticleCount,
+                ballSpawnParticleOffsetX,
+                ballSpawnParticleOffsetY,
+                ballSpawnParticleOffsetZ,
+                ballSpawnParticleSpeed
+        );
 
         Ball ball = new Ball();
         ball.setId(id);
@@ -63,11 +120,22 @@ public class CubeBall extends JavaPlugin {
 
         ball.setPlayerCollisionTick(0);
         balls.put(id, ball);
+
+        // Some server/client combinations do not keep the glowing flag on the first spawn packet.
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            Ball spawnedBall = balls.get(id);
+            if (spawnedBall != null && spawnedBall.getBall() != null) {
+                applyBallVisualSettings(spawnedBall.getBall());
+            }
+        });
     }
 
     public static void destroyBall(String id) {
-        if (balls.get(id) != null && balls.get(id).getBall() != null) {
-            balls.get(id).getBall().remove();
+        Ball ball = balls.get(id);
+        if (ball != null) {
+            if (ball.getBall() != null) {
+                ball.getBall().remove();
+            }
             balls.remove(id);
         }
     }
@@ -77,6 +145,17 @@ public class CubeBall extends JavaPlugin {
         pm.registerEvents(new CubeBallListener(), this);
 
         plugin = this;
+        configGateway = new ConfigGateway() {
+            @Override
+            public void reloadConfig() {
+                CubeBall.this.reloadConfig();
+            }
+
+            @Override
+            public FileConfiguration getConfig() {
+                return CubeBall.this.getConfig();
+            }
+        };
 
         Metrics metrics = new Metrics(this, 17634);
 
@@ -88,13 +167,9 @@ public class CubeBall extends JavaPlugin {
         Objects.requireNonNull(getCommand("cb")).setTabCompleter(new CBTabCompletion());
 
         configFile = new File(getDataFolder(), "config.yml");
-        if (!configFile.exists()) {
-            saveDefaultConfig();
-        } else {
-            cubeBallBlock = Material.valueOf((String) getConfig().get("cubeBallBlock"));
-            matchDuration = getConfig().getInt("matchDuration");
-            maxGoal = getConfig().getInt("maxGoal");
-        }
+        saveDefaultConfig();
+        reloadConfig();
+        applyConfigValues(getConfig());
     }
 
     public void onDisable() {
@@ -133,7 +208,7 @@ public class CubeBall extends JavaPlugin {
                     }
                 }
             }
-        }, 0, 20);
+        }, 0, matchTimerTaskPeriodTicks);
 
 
         getServer().getScheduler().scheduleSyncRepeatingTask(this, () -> {
@@ -143,6 +218,7 @@ public class CubeBall extends JavaPlugin {
                 String id = entry.getKey();
                 Ball ballData = entry.getValue();
                 if (ballData.getBall() != null) {
+                    applyBallVisualSettings(ballData.getBall());
                     ballData.getBall().setTicksLived(1);
 
                     ArrayList<Player> players = new ArrayList<>();
@@ -153,23 +229,23 @@ public class CubeBall extends JavaPlugin {
                         players.addAll(Bukkit.getOnlinePlayers());
                     }
 
-                    ballData.getBall().getNearbyEntities(10, 10, 10)
+                    ballData.getBall().getNearbyEntities(ballPlayerSearchRadius, ballPlayerSearchRadius, ballPlayerSearchRadius)
                             .stream().filter(entity -> entity instanceof Player)
                             .forEach(p -> {
                                 Player player = (Player) p;
                                 // if player is colliding the ball
-                                if (player.getLocation().distance(ballData.getBall().getLocation()) < 1 || (
-                                        player.getLocation().distance(ballData.getBall().getLocation()) < 2 &&
+                                if (player.getLocation().distance(ballData.getBall().getLocation()) < ballDirectHitDistance || (
+                                        player.getLocation().distance(ballData.getBall().getLocation()) < ballColumnHitDistance &&
                                                 Math.floor(ballData.getBall().getLocation().getX()) == Math.floor(player.getLocation().getX()) &&
                                                 Math.floor(ballData.getBall().getLocation().getZ()) == Math.floor(player.getLocation().getZ()))) {
 
                                     // compute velocity to the ball
-                                    double yVeclocity = 0.15;
+                                    double yVeclocity = baseKickYVelocity;
 
                                     if (player.isSneaking()) {
-                                        yVeclocity = 0.5;
+                                        yVeclocity = sneakingKickYVelocity;
                                     } else if (player.isSprinting()) {
-                                        yVeclocity = 0.25;
+                                        yVeclocity = sprintingKickYVelocity;
                                     }
 
                                     Vector velocity = ballData.getBall().getVelocity();
@@ -187,7 +263,7 @@ public class CubeBall extends JavaPlugin {
                                     // apply ball trajectory
                                     ballData.getBall().setVelocity(velocity);
                                     ballData.getBall().setGravity(true);
-                                    ballData.getBall().getWorld().playSound(ballData.getBall().getLocation(), Sound.BLOCK_WOOL_HIT, 10, 1);
+                                    playBallHitSound(ballData.getBall().getLocation());
                                     ballData.setPlayerCollisionTick(0);
 
                                     if (match != null) {
@@ -197,26 +273,26 @@ public class CubeBall extends JavaPlugin {
                             });
 
                     //compute bouncing on other blocks
-                    if (ballData.getPlayerCollisionTick() > 3) {
+                    if (ballData.getPlayerCollisionTick() > blockBounceDelayTicks) {
 
-                        boolean zBouncing = abs(ballData.getLastVelocity().getZ()) - abs(ballData.getBall().getVelocity().getZ()) > 0.2 && ballData.getBall().getVelocity().getZ() == 0;
-                        boolean xBouncing = abs(ballData.getLastVelocity().getX()) - abs(ballData.getBall().getVelocity().getX()) > 0.2 && ballData.getBall().getVelocity().getX() == 0;
-                        boolean yBouncing = abs(ballData.getLastVelocity().getY()) - abs(ballData.getBall().getVelocity().getY()) > 0.2 && ballData.getBall().getVelocity().getY() == 0;
+                        boolean zBouncing = abs(ballData.getLastVelocity().getZ()) - abs(ballData.getBall().getVelocity().getZ()) > blockBounceThreshold && ballData.getBall().getVelocity().getZ() == 0;
+                        boolean xBouncing = abs(ballData.getLastVelocity().getX()) - abs(ballData.getBall().getVelocity().getX()) > blockBounceThreshold && ballData.getBall().getVelocity().getX() == 0;
+                        boolean yBouncing = abs(ballData.getLastVelocity().getY()) - abs(ballData.getBall().getVelocity().getY()) > blockBounceThreshold && ballData.getBall().getVelocity().getY() == 0;
 
                         if (zBouncing) {
                             ballData.getBall().setVelocity(ballData.getBall().getVelocity().setZ(-ballData.getLastVelocity().getZ()));
                             ballData.getBall().getVelocity().setZ(-ballData.getLastVelocity().getZ());
-                            ballData.getBall().getWorld().playSound(ballData.getBall().getLocation(), Sound.BLOCK_WOOL_HIT, 10, 1);
+                            playBallHitSound(ballData.getBall().getLocation());
                         }
                         if (xBouncing) {
                             ballData.getBall().setVelocity(ballData.getBall().getVelocity().setX(-ballData.getLastVelocity().getX()));
                             ballData.getBall().getVelocity().setX(-ballData.getLastVelocity().getX());
-                            ballData.getBall().getWorld().playSound(ballData.getBall().getLocation(), Sound.BLOCK_WOOL_HIT, 10, 1);
+                            playBallHitSound(ballData.getBall().getLocation());
                         }
                         if (yBouncing) {
                             ballData.getBall().setGravity(true);
                             ballData.getBall().setVelocity(ballData.getBall().getVelocity().setY(-ballData.getLastVelocity().getY()));
-                            ballData.getBall().getWorld().playSound(ballData.getBall().getLocation(), Sound.BLOCK_WOOL_HIT, 10, 1);
+                            playBallHitSound(ballData.getBall().getLocation());
                         }
                     }
 
@@ -228,7 +304,90 @@ public class CubeBall extends JavaPlugin {
                     ballData.setPlayerCollisionTick(ballData.getPlayerCollisionTick() + 1);
                 }
             }
-        }, 0, 2);
+        }, 0, ballUpdateTaskPeriodTicks);
+    }
+
+    public static void playBallHitSound(Location location) {
+        location.getWorld().playSound(location, ballHitSound, ballHitSoundVolume, ballHitSoundPitch);
+    }
+
+    private static void applyBallVisualSettings(FallingBlock block) {
+        block.setDropItem(ballDropItem);
+        block.setInvulnerable(ballInvulnerable);
+    }
+
+    public static void reloadPluginConfiguration() {
+        configGateway.reloadConfig();
+        applyConfigValues(configGateway.getConfig());
+    }
+
+    static void applyConfigValues(FileConfiguration config) {
+        cubeBallBlock = material(config, "ball.material", Material.IRON_BLOCK);
+        ballDropItem = config.getBoolean("ball.drop-item", false);
+        ballInvulnerable = config.getBoolean("ball.invulnerable", true);
+        ballSpawnParticle = particle(config, "ball.spawn-particle.type", Particle.CLOUD);
+        ballSpawnParticleCount = config.getInt("ball.spawn-particle.count", 12);
+        ballSpawnParticleOffsetX = config.getDouble("ball.spawn-particle.offset.x", 0.2);
+        ballSpawnParticleOffsetY = config.getDouble("ball.spawn-particle.offset.y", 0.2);
+        ballSpawnParticleOffsetZ = config.getDouble("ball.spawn-particle.offset.z", 0.2);
+        ballSpawnParticleSpeed = config.getDouble("ball.spawn-particle.speed", 0.01);
+
+        matchDuration = config.getInt("match.duration-seconds", 300);
+        maxGoal = config.getInt("match.max-goals", 0);
+        scanRadius = config.getInt("match.scan-radius", 75);
+        countdownStepTicks = config.getInt("match.countdown-step-ticks", 20);
+        roundRestartDelayTicks = config.getInt("match.round-restart-delay-ticks", 60);
+        titleFadeInTicks = config.getInt("match.title.fade-in-ticks", 1);
+        titleStayPerSecondTicks = config.getInt("match.title.stay-per-second-ticks", 20);
+        titleFadeOutTicks = config.getInt("match.title.fade-out-ticks", 1);
+        titleSound = sound(config, "match.title.sound.name", Sound.BLOCK_BEACON_ACTIVATE);
+        titleSoundVolume = (float) config.getDouble("match.title.sound.volume", 1.0);
+        titleSoundPitch = (float) config.getDouble("match.title.sound.pitch", 3.0);
+        goalEffect = effect(config, "match.goal-animation.effect.name", Effect.VILLAGER_PLANT_GROW);
+        goalEffectData = config.getInt("match.goal-animation.effect.data", 3);
+        spawnGoalFireworks = config.getBoolean("match.goal-animation.firework.enabled", true);
+
+        ballSpawnBlock = material(config, "arena.materials.ball-spawn", Material.EMERALD_BLOCK);
+        blueTeamSpawnBlock = material(config, "arena.materials.blue-team-spawn", Material.BLUE_WOOL);
+        blueTeamGoalBlock = material(config, "arena.materials.blue-team-goal", Material.BLUE_CONCRETE);
+        redTeamSpawnBlock = material(config, "arena.materials.red-team-spawn", Material.RED_WOOL);
+        redTeamGoalBlock = material(config, "arena.materials.red-team-goal", Material.RED_CONCRETE);
+
+        ballHitSound = sound(config, "physics.ball-hit-sound.name", Sound.BLOCK_WOOL_HIT);
+        ballHitSoundVolume = (float) config.getDouble("physics.ball-hit-sound.volume", 10.0);
+        ballHitSoundPitch = (float) config.getDouble("physics.ball-hit-sound.pitch", 1.0);
+        ballHitSoundThreshold = config.getDouble("physics.ball-hit-sound.minimum-impact", 0.1);
+        ballPlayerSearchRadius = config.getInt("physics.player-search-radius", 10);
+        ballDirectHitDistance = config.getDouble("physics.player-direct-hit-distance", 1.0);
+        ballColumnHitDistance = config.getDouble("physics.player-column-hit-distance", 2.0);
+        baseKickYVelocity = config.getDouble("physics.kick.y-velocity.base", 0.15);
+        sneakingKickYVelocity = config.getDouble("physics.kick.y-velocity.sneaking", 0.5);
+        sprintingKickYVelocity = config.getDouble("physics.kick.y-velocity.sprinting", 0.25);
+        blockBounceDelayTicks = config.getInt("physics.block-bounce.delay-ticks", 3);
+        blockBounceThreshold = config.getDouble("physics.block-bounce.threshold", 0.2);
+        listenerBounceDivisor = config.getDouble("physics.listener-bounce.divisor", 1.5);
+        listenerBounceMaxYVelocity = config.getDouble("physics.listener-bounce.max-y-velocity", 0.5);
+        listenerStopVelocityThreshold = config.getDouble("physics.listener-bounce.stop-velocity-threshold", 0.001);
+        listenerStopMinYVelocity = config.getDouble("physics.listener-bounce.stop-min-y-velocity", 0.025);
+        listenerFetchDistanceSquared = config.getDouble("physics.listener-bounce.fetch-distance-squared", 2.0);
+        matchTimerTaskPeriodTicks = config.getInt("tasks.match-timer-period-ticks", 20);
+        ballUpdateTaskPeriodTicks = config.getInt("tasks.ball-update-period-ticks", 2);
+    }
+
+    private static Material material(FileConfiguration config, String path, Material fallback) {
+        return Material.valueOf(config.getString(path, fallback.name()).toUpperCase(Locale.ROOT));
+    }
+
+    private static Sound sound(FileConfiguration config, String path, Sound fallback) {
+        return Sound.valueOf(config.getString(path, fallback.name()).toUpperCase(Locale.ROOT));
+    }
+
+    private static Particle particle(FileConfiguration config, String path, Particle fallback) {
+        return Particle.valueOf(config.getString(path, fallback.name()).toUpperCase(Locale.ROOT));
+    }
+
+    private static Effect effect(FileConfiguration config, String path, Effect fallback) {
+        return Effect.valueOf(config.getString(path, fallback.name()).toUpperCase(Locale.ROOT));
     }
 }
 
