@@ -34,6 +34,9 @@ tasks.withType<JavaCompile>().configureEach {
 
 tasks.processResources {
     filteringCharset = "UTF-8"
+    filesMatching("plugin.yml") {
+        expand("version" to project.version)
+    }
 }
 
 tasks.jar {
@@ -51,4 +54,10 @@ tasks.build {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+tasks.register("printVersion") {
+    doLast {
+        println(project.version)
+    }
 }

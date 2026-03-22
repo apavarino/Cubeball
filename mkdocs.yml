@@ -1,0 +1,27 @@
+site_name: CubeBall Documentation
+site_url: https://stellionix.github.io/Cubeball/
+repo_url: https://github.com/stellionix/Cubeball
+repo_name: apavarino/Cubeball
+
+plugins:
+  - search
+  - stellionix-shared-docs
+
+theme:
+  name: material
+  logo: assets/images/cubeball-logo-small.png
+  favicon: assets/images/cubeball-logo-small.png
+
+nav:
+  - Getting Started:
+      - Home: index.md
+      - Download: download.md
+      - Installation: installation.md
+      - How It Works: how-it-works.md
+  - Administration:
+      - Configuration: configuration.md
+      - Commands and Permissions: commands-and-perms.md
+      - Arena Setup: arena-setup.md
+      - Troubleshooting: troubleshooting.md
+  - Developer:
+      - Contribution: contribution.md

@@ -1,0 +1,1 @@
+stellionix-mkdocs @ git+https://github.com/Stellionix/docs-common.git@main

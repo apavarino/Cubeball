@@ -4,7 +4,8 @@
 
 <h2  align="center">
     <img src="http://cf.way2muchnoise.eu/full_470085_downloads.svg" alt="download"/> 
-    <img src="https://github.com/apavarino/Cubeball/actions/workflows/ci.yml/badge.svg" alt="CI"/>
+    <a href="https://github.com/apavarino/Cubeball/actions/workflows/ci.yml"><img src="https://github.com/apavarino/Cubeball/actions/workflows/ci.yml/badge.svg" alt="CI"/></a>
+    <a href="https://stellionix.github.io/Cubeball/"><img src="https://img.shields.io/badge/docs-online-blue" alt="Docs"/></a>
     <img src="https://img.shields.io/github/license/apavarino/cubeball" alt="licence"/>
     <img src="https://img.shields.io/github/last-commit/apavarino/cubeball" alt="commit"/>
 </h2>
@@ -18,4 +19,5 @@ Java Edition required. Cubeball is mainly compatible with Bukkit, Spigot and Pap
 
 * Curseforge: https://www.curseforge.com/minecraft/bukkit-plugins/cubeball
 * Bukkit : https://dev.bukkit.org/projects/cubeball
+* Docs: https://stellionix.github.io/Cubeball/
 
